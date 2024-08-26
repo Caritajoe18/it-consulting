@@ -18,7 +18,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const PORT = '';
+const PORT = process.env.PORT ?? 5000;
 
 connectToDatabase()
   .then(async () => {
