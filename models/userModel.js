@@ -1,8 +1,7 @@
-import { DataTypes, Model } from 'sequelize';
-import {db} from './db.js';
+import { DataTypes, Model } from "sequelize";
+import { db } from "../db.js";
 
-class User extends Model {};
-
+class User extends Model {}
 
 User.init(
   {
@@ -12,6 +11,14 @@ User.init(
       primaryKey: true,
       allowNull: false,
     },
+    transactionId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    subscription: {
+      type: DataTypes.STRING,
+      defaultValue: null,
+    },
     firstname: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -19,6 +26,10 @@ User.init(
     lastname: {
       type: DataTypes.STRING,
       allowNull: false,
+    },
+    paymentStatus:{
+    type: DataTypes.BOOLEAN ,
+    defaultValue:false ,
     },
     email: {
       type: DataTypes.STRING,
@@ -30,18 +41,17 @@ User.init(
       allowNull: false,
     },
     gender: {
-        type: DataTypes.ENUM('Male', 'Female'),
-        allowNull: false, 
-      },
-    city:{
-        type: DataTypes.STRING,
-        allowNull: false,
-    }
+      type: DataTypes.ENUM("Male", "Female"),
+      allowNull: false,
+    },
+    city: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
   },
   {
     sequelize: db,
-    tableName: 'users',
-    
+    tableName: "users",
   }
 );
 
