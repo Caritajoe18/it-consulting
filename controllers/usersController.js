@@ -2,6 +2,23 @@ import User from "../models/userModel.js";
 
 import { v4 as uuidv4 } from "uuid";
 
+const getAmount = (subscription) => {
+  let amount;
+
+  switch (subscription) {
+    case "starter":
+      amount = 20000;
+      break;
+    case "affiliate":
+      amount = 50000;
+      break;
+    default:
+      amount = 100000;
+      break;
+  }
+  return amount;
+};
+
 export const signUp = async (req, res) => {
   const { email } = req.body;
 
@@ -30,26 +47,29 @@ export const assignPlan = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
+    const newAmount = getAmount(subscription);
 
-    const amount =
-      subscription == "starter"
-        ? 20000
-        : subscription == "affiliate"
-        ? 50000
-        : 100000;
-    const transactionId = `tx-${user.id}-${Date.now()}-${uuidv4()}`;
+    // const transactionId = `tx-${user.id}-${Date.now()}-${uuidv4()}`;
+
+
+    const transactionId = `tx-${Math.floor(10000000 + Math.random() * 90000000).toString()}`;
 
     const updated = await User.update(
-      { transactionId, subscription, amount },
-      { where: { id: id }, returning: true }
+      { ...req.body, transactionId, amount: newAmount },
+      { where: { id: id } }
     );
 
+    console.log("newuser", user);
+
     if (updated) {
+      const updatedUser = await User.findOne({ where: { id } });
       return res
-        .status(301)
-        .json({ message: "User updated successfully", user });
+        .status(200)
+        .json({ message: "User updated successfully", updatedUser });
     } else {
-      return res.status(404).json({ error: "User not found" });
+      return res
+        .status(404)
+        .json({ error: "amount not updated,please try again" });
     }
   } catch (error) {
     console.error("Error updating user:", error.message);
