@@ -31,6 +31,10 @@ User.init(
     type: DataTypes.BOOLEAN ,
     defaultValue:false ,
     },
+    amount :{
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     email: {
       type: DataTypes.STRING,
       allowNull: false,

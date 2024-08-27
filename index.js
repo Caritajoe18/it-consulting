@@ -24,7 +24,7 @@ connectToDatabase()
   .then(async () => {
     console.log("MySQL connected...");
 
-    db.sync({ alter: false}).then(() => {
+    db.sync({ alter:false}).then(() => {
       console.log("Connected to MySql");
     });
 
