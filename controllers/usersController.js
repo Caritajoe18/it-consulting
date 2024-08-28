@@ -52,6 +52,7 @@ export const assignPlan = async (req, res) => {
     // const transactionId = `tx-${user.id}-${Date.now()}-${uuidv4()}`;
 
 
+
     const transactionId = `tx-${Math.floor(10000000 + Math.random() * 90000000).toString()}`;
 
     const updated = await User.update(

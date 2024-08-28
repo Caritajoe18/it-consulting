@@ -1,7 +1,11 @@
 import User from "../models/userModel.js";
 import Flutterwave from "flutterwave-node-v3";
-//import { v4 as uuidv4 } from "uuid";
-//import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+import open from "open";
+import PaymentEvent from "../models/paymentEvent.js";
+import axios from "axios";
+dotenv.config();
+
 import forge from "node-forge";
 
 const flw = new Flutterwave(
@@ -87,22 +91,26 @@ export const flwWebhook = async (req, res) => {
     }
 
     const payload = req.body;
-    console.log("Webhook payload received:", payload);
 
-    const { id, tx_ref, status } = payload.data;
+    const { id, tx_ref } = payload.data;
 
-    const existingEvent = await PaymentEvent.findOne({ where: { id } });
+    const existingEvent = await PaymentEvent.findOne({
+      where: { transactionid: tx_ref },
+    });
     if (existingEvent) {
       return res.status(200).send("Event already processed");
     }
 
     const user = await User.findOne({ where: { transactionId: tx_ref } });
 
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
-    const expectedAmount = getExpectedAmount(user.subscription);
+    const expectedAmount = user.dataValues.amount;
 
     const verificationResponse = await flw.Transaction.verify({ id });
+
     if (
       verificationResponse.data.status === "successful" &&
       verificationResponse.data.amount === expectedAmount &&
@@ -113,15 +121,45 @@ export const flwWebhook = async (req, res) => {
         { where: { transactionId: tx_ref } }
       );
 
-      await PaymentEvent.create({ id, status: "processed" });
+      await PaymentEvent.create({
+        status: "processed",
+        payload,
+        transactionId: tx_ref,
+      });
 
       res.status(200).send("Payment confirmed");
     } else {
       res.status(400).send("Payment verification failed");
     }
   } catch (error) {
-    console.error("Error handling webhook:", error);
+    //console.error("Error handling webhook:", error);
     res.status(500).json({ error: "An error occurred processing the webhook" });
+  }
+};
+
+export const simulatePayment = async (req, res) => {
+  try {
+    const { data } = req.body;
+    const { tx_ref } = data;
+    const existingEvent = await PaymentEvent.findOne({
+      where: { transactionId: tx_ref },
+    });
+    if (existingEvent) {
+      return res.status(200).send("Event already processed");
+    }
+    const newEvent = await PaymentEvent.create({
+      transactionId: tx_ref,
+      status: "pending",
+      payload: JSON.stringify(req.body), // Store the entire request body as JSON
+    });
+
+    res
+      .status(200)
+      .json({ message: "Mock payment event created successfully" });
+
+    console.log("Mock payment simulated:", newEvent);
+  } catch (error) {
+    console.error("Error simulating payment:", error);
   }
 };
 
@@ -132,24 +170,34 @@ export const initiatePay = async (req, res) => {
       cvv,
       expiry_month,
       expiry_year,
+      currency,
       amount,
       fullname,
       email,
-      tx_ref,
+      phone_number,
     } = req.body;
-    const details = {
+
+    const transactionid = `tx-${Math.floor(
+      10000000 + Math.random() * 90000000
+    ).toString()}`;
+
+    const payload = {
       card_number,
       cvv,
       expiry_month,
       expiry_year,
-      currency: "NGN",
+      currency: currency || "NGN", // Default to NGN if not provided
       amount,
+      redirect_url: "https://your-redirect-url.com",
       fullname,
       email,
-      tx_ref,
-      redirect_url: "https://www,flutterwave.ng",
+      phone_number,
+      enckey: process.env.FLW_ENCRYPTION_KEY,
+      tx_ref: transactionid,
     };
-    await flw.Charge.card(details);
+
+    await flw.Charge.card(payload);
+    console.log(response, "rrrrrrrrrr");
 
     if (response.meta.authorization.mode === "pin") {
       let payload2 = payload;
@@ -167,15 +215,12 @@ export const initiatePay = async (req, res) => {
     }
 
     if (response.meta.authorization.mode === "redirect") {
-      var url = response.meta.authorization.redirect;
+      let url = response.meta.authorization.redirect;
       open(url);
     }
     res.status(200).json(response);
     console.log(response);
   } catch (error) {
-    if (error instanceof Error) {
-      return res.status(500).json({ error: error.message });
-    }
-    return res.status(500).json({ error: "An error occurred" });
+    console.log(error);
   }
 };
